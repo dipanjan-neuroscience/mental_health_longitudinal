@@ -1,0 +1,52 @@
+clear
+clc
+table=readtable('mood.csv');
+table.answer_timestamp=erase(table.answer_timestamp,"+01:00");
+table.answer_timestamp=erase(table.answer_timestamp,"+02:00");
+table.answer_timestamp=datetime(table.answer_timestamp);
+table.timestamp=[];
+table.valence_scale_ini=[];
+table.arousal_scale_ini=[];
+table.input_method=[];
+% Group based on participant column
+par = findgroups(table{:, 1});
+% split based on participant column
+T_split = splitapply( @(varargin) varargin, table , par);
+for i=1:size(T_split,1)
+    T_split{i,2}=diff(T_split{i,2});
+end
+for i=1:size(T_split,1)
+    for j=2:size(T_split{i,2},1)
+             T_split{i,2}(j)= T_split{i,2}(j-1)+T_split{i,2}(j);
+             
+    end
+end
+
+for i=1:size(T_split,1) 
+            T_split{i,2}(2:end+1,:) = T_split{i,2}(1:end,:);
+            T_split{i,2}(1)=duration(0,0,0);
+end
+
+%scatter3(T_split{1,2},T_split{1,3},T_split{1,4},100,'MarkerEdgeColor','k',...
+        'MarkerFaceColor',[0 .75 .75])
+%C=[1:150];
+%scatter3(T_split{1,2},T_split{1,3},T_split{1,4},100,C)
+%colormap(gca,"winter")
+%view(-30,10)
+for i=1:length(T_split{1,2})
+       plot3(T_split{1,2}(i),T_split{1,3}(i),T_split{1,4}(i),'-o','Color','b','MarkerSize',10,'MarkerFaceColor','c')
+       hold on;
+       ax = gca;
+       ax.YDir = 'reverse';
+       xlim([min(T_split{1,2}),max(T_split{1,2})]);
+       ylim([-50,50]);
+       zlim([0,100]);
+       xlabel('Time (minutes)');
+       ylabel('Valence');
+       zlabel('Arousal');
+       pause(0.1);
+end
+
+
+
+%plot3(T_split{1,2},T_split{1,3},T_split{1,4},'*r')
