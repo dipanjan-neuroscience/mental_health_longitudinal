@@ -12,33 +12,48 @@ table.input_method=[];
 par = findgroups(table{:, 1});
 % split based on participant column
 T_split = splitapply( @(varargin) varargin, table , par);
+% create fifth column with time
+for i=1:size(T_split,1)
+       for j=1:size(T_split{i,2},1)
+                  [h,m,s] = hms(T_split{i,2}(j));
+                   T_split{i,5}(j,1)=duration(h,m,s);
+       end
+end
+
+edges = duration(0:6:24,0,0);
+for i=1:size(T_split,1)
+                    T_split{i,5} = discretize(T_split{i,5},edges,'IncludedEdge','right');
+end
+
+%calculate the time difference
 for i=1:size(T_split,1)
     T_split{i,2}=diff(T_split{i,2});
 end
+% time gap from the begining of time
 for i=1:size(T_split,1)
     for j=2:size(T_split{i,2},1)
              T_split{i,2}(j)= T_split{i,2}(j-1)+T_split{i,2}(j);
              
     end
 end
-
 for i=1:size(T_split,1) 
             T_split{i,2}(2:end+1,:) = T_split{i,2}(1:end,:);
             T_split{i,2}(1)=duration(0,0,0);
 end
-
+% 3d scatter plot animation
 %scatter3(T_split{1,2},T_split{1,3},T_split{1,4},100,'MarkerEdgeColor','k',...
         'MarkerFaceColor',[0 .75 .75])
 %C=[1:150];
 %scatter3(T_split{1,2},T_split{1,3},T_split{1,4},100,C)
 %colormap(gca,"winter")
 %view(-30,10)
-for i=1:length(T_split{1,2})
-       plot3(T_split{1,2}(i),T_split{1,3}(i),T_split{1,4}(i),'-o','Color','b','MarkerSize',10,'MarkerFaceColor','c')
+s=11;
+for i=1:length(T_split{s,2})
+       plot3(T_split{s,2}(i),T_split{s,3}(i),T_split{s,4}(i),'-o','Color','b','MarkerSize',10,'MarkerFaceColor','c')
        hold on;
        ax = gca;
        ax.YDir = 'reverse';
-       xlim([min(T_split{1,2}),max(T_split{1,2})]);
+       xlim([min(T_split{s,2}),max(T_split{s,2})]);
        ylim([-50,50]);
        zlim([0,100]);
        xlabel('Time (minutes)');
@@ -50,3 +65,64 @@ end
 
 
 %plot3(T_split{1,2},T_split{1,3},T_split{1,4},'*r')
+x=minutes(x);
+dt = delaunayTriangulation(x,y) ;
+tri = dt.ConnectivityList ;
+xi = dt.Points(:,1) ; 
+yi = dt.Points(:,2) ; 
+F = scatteredInterpolant(x,y,z);
+zi = F(xi,yi) ;
+trisurf(tri,xi,yi,zi) 
+view(2)
+shading interp
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+x=T_split{1,2};
+y=T_split{1,3};
+z=T_split{1,4};
+x=minutes(x);
+[X Y]=meshgrid(x,y);
+Z=griddata(x,y,z, X,Y);
+s= surf(X,Y,Z,'FaceAlpha',0.5);
+s.EdgeColor = 'none';
+
+meshz(X,Y,Z) 
+
+surfl(X,Y,Z)
+shading interp
+colormap(gray);
+
+
+
+[Nx,Ny,Nz] = surfnorm(X,Y,Z);
+quiver3(X,Y,Z,Nx,Ny,Nz)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% waterfall plot
+
+[Y X]=meshgrid(y,x);
+Z=griddata(y,x,z, Y,X);
+p=waterfall(Y,X,Z);
+p.EdgeColor = 'b';
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+gx=gradient(x);
+
+gy=gradient(y);
+
+gz=gradient(z);
+
+quiver(y,z,gy,gz,0)
+axis equal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for k=1:size(T_split,1)
+                      Date{k,1}=dateshift(T_split{k,2},'start','day');
+                      Date{k,1}.Format='MM/dd/yyyy';
+end
+T_split.Date=Date;
+% Group based on date
+dt = findgroups(Date);
+% split based on participant column
+T_subsplit = splitapply( @(varargin) varargin, T_split , dt);
