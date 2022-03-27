@@ -9,37 +9,51 @@ table.valence_scale_ini=[];
 table.arousal_scale_ini=[];
 table.input_method=[];
 % Group based on participant column
-par = findgroups(table{:, 1});
+par=unique(table{:,1},'stable');
 % split based on participant column
-T_split = splitapply( @(varargin) varargin, table , par);
+for i=1:size(par,1)
+             T_split{i,:}=table(table.participant == par(i),:);
+end
+
+
 % create fifth column with time
 for i=1:size(T_split,1)
-       for j=1:size(T_split{i,2},1)
-                  [h,m,s] = hms(T_split{i,2}(j));
-                   T_split{i,5}(j,1)=duration(h,m,s);
+       for j=1:size(T_split{i,1}.answer_timestamp,1)
+                  [h,m,s] = hms(T_split{i,1}.answer_timestamp(j));
+                   T_split{i,1}.time(j)=duration(h,m,s);
        end
 end
 
-edges = duration(0:6:24,0,0);
+%create sixth column with time segment information
+edges = duration(0:4:24,0,0);
 for i=1:size(T_split,1)
-                    T_split{i,5} = discretize(T_split{i,5},edges,'IncludedEdge','right');
+                    T_split{i,1}.time_segment = discretize(T_split{i,1}.time,edges,'IncludedEdge','right');
 end
 
-%calculate the time difference
+
+% create a column with time difference from begining of time
 for i=1:size(T_split,1)
-    T_split{i,2}=diff(T_split{i,2});
+       for j=1:size(T_split{i,1}.answer_timestamp,1)
+               T_split{i,1}.answer_timestamp_from_begining(j)=T_split{i,1}.answer_timestamp(j) - T_split{i,1}.answer_timestamp(1);
+       end
 end
-% time gap from the begining of time
+
+%remove particpants with less than 10 recording
 for i=1:size(T_split,1)
-    for j=2:size(T_split{i,2},1)
-             T_split{i,2}(j)= T_split{i,2}(j-1)+T_split{i,2}(j);
-             
-    end
-end
-for i=1:size(T_split,1) 
-            T_split{i,2}(2:end+1,:) = T_split{i,2}(1:end,:);
-            T_split{i,2}(1)=duration(0,0,0);
-end
+          sz(i,1)=size(T_split{i,1},1) ;
+end 
+rm=find(sz<=10);
+T_split(rm)=[];
+
+
+% find participants with wrong sorting of duration
+for i=1:size(T_split,1)   
+                    correct(i,1)=issorted(T_split{i,1}.answer_timestamp_from_begining);
+                    wrong=find(~correct);
+end            
+         
+
+
 % 3d scatter plot animation
 %scatter3(T_split{1,2},T_split{1,3},T_split{1,4},100,'MarkerEdgeColor','k',...
         'MarkerFaceColor',[0 .75 .75])
@@ -47,13 +61,15 @@ end
 %scatter3(T_split{1,2},T_split{1,3},T_split{1,4},100,C)
 %colormap(gca,"winter")
 %view(-30,10)
-s=11;
-for i=1:length(T_split{s,2})
-       plot3(T_split{s,2}(i),T_split{s,3}(i),T_split{s,4}(i),'-o','Color','b','MarkerSize',10,'MarkerFaceColor','c')
+
+%3d plot animation
+s=1;
+for i=1:length(T_split{s,1}.participant)
+       plot3(T_split{s,1}.answer_timestamp_from_begining(i),T_split{s,1}.valence(i),T_split{s,1}.arousal(i),'-o','Color','b','MarkerSize',10,'MarkerFaceColor','c')
        hold on;
        ax = gca;
        ax.YDir = 'reverse';
-       xlim([min(T_split{s,2}),max(T_split{s,2})]);
+       xlim([min(T_split{s,1}.answer_timestamp_from_begining),max(T_split{s,1}.answer_timestamp_from_begining)]);
        ylim([-50,50]);
        zlim([0,100]);
        xlabel('Time (minutes)');
@@ -62,7 +78,16 @@ for i=1:length(T_split{s,2})
        pause(0.1);
 end
 
-
+for i=1:145
+                 plot(val1(i),val2(i),'o','Color','b','MarkerSize',10,'MarkerFaceColor','c')
+                 hold on
+                 ylim([-50,50]);
+                 xlim([-50,50]);
+                 %xlim([0,100]);
+                 %ylim([0,100]);
+                 pause(0.3);
+end
+ 
 
 %plot3(T_split{1,2},T_split{1,3},T_split{1,4},'*r')
 x=minutes(x);
